@@ -147,7 +147,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Register.h" />
-    <ClInclude Include="RegStruct.h" />
     <ClInclude Include="utility.h" />
     <ClInclude Include="Vmx.h" />
     <ClInclude Include="VtSystem.h" />
@@ -159,6 +158,9 @@
   <ItemGroup>
     <MASM Include="Register.asm" />
     <MASM Include="Vmx.asm" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Vmx.inc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
