@@ -3,9 +3,7 @@
 
 #include <ntddk.h>
 
-void _KdPrint(char* Msg_)
-{
-	KdPrint(("[%s] [%s]: %s", __FILE__, __LINE__, Msg_));
-}
+#define _KdPrint(Msg_) KdPrint(("[%s] [%d]: %s", __FILE__, __LINE__, (Msg_)))
+#define _Break3() {__asm int 3}
 
 #endif // !__UTILITY_H__

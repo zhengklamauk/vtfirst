@@ -6,13 +6,13 @@
 typedef struct _VMXREGION {
 	PVOID				pvRegion;
 	PHYSICAL_ADDRESS	pvPhysicalAddress;
+	BOOLEAN				isVMXON;
 }VMXREGION, *PVMXREGION;
 
-VMXREGION g_VmxRegion;
+NTSTATUS _StartVirtualTechnology();
+VOID _StopVirtualTechnology();
 
-NTSTATUS StartVirtualTechnology();
-NTSTATUS StopVirtualTechnology();
-
-static BOOLEAN IsSupportVMX();
+static BOOLEAN _IsSupportVMX();
+static BOOLEAN _CreateVMXRegion(PVMXREGION pstVMXRegion_);
 
 #endif // !__VTSYSTEM_H__
