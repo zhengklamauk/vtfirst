@@ -146,12 +146,16 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="GuestEntry.h" />
+    <ClInclude Include="HostHandler.h" />
     <ClInclude Include="Register.h" />
     <ClInclude Include="utility.h" />
     <ClInclude Include="Vmx.h" />
     <ClInclude Include="VtSystem.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="GuestEntry.cpp" />
+    <ClCompile Include="HostHandler.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="VtSystem.cpp" />
   </ItemGroup>
@@ -160,6 +164,7 @@
     <MASM Include="Vmx.asm" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Register.inc" />
     <None Include="Vmx.inc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

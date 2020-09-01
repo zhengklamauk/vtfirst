@@ -27,12 +27,24 @@
     <ClInclude Include="Vmx.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="HostHandler.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="GuestEntry.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="VtSystem.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="HostHandler.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="GuestEntry.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
@@ -46,6 +58,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Vmx.inc">
+      <Filter>头文件</Filter>
+    </None>
+    <None Include="Register.inc">
       <Filter>头文件</Filter>
     </None>
   </ItemGroup>

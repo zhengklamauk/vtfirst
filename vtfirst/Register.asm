@@ -2,6 +2,7 @@
 .model flat, stdcall
 option casemap:none
 
+include Register.inc
 
 .code
 
@@ -15,6 +16,17 @@ _SetCr0 proc dw32Value_:dword
     mov cr0, eax
     ret
 _SetCr0 endp
+
+_GetCr3 proc
+    mov eax, cr3
+    ret
+_GetCr3 endp
+
+_SetCr3 proc dw32Value_:dword
+    mov eax, dw32Value_
+    mov cr3, eax
+    ret
+_SetCr3 endp
 
 _GetCr4 proc
 	mov eax, cr4
@@ -33,6 +45,171 @@ _GetEflags proc
 	ret
 _GetEflags endp
 
+_GetCs proc
+    xor eax, eax
+    mov ax, cs
+    ret
+_GetCs endp
+
+_GetSs proc
+    xor eax, eax
+    mov ax, ss
+    ret
+_GetSs endp
+
+_GetDs proc
+    xor eax, eax
+    mov ax, ds
+    ret
+_GetDs endp
+
+_GetEs proc
+    xor eax, eax
+    mov ax, es
+    ret
+_GetEs endp
+
+_GetFs proc
+    xor eax, eax
+    push fs
+    pop eax
+    ret
+_GetFs endp
+
+_GetGs proc
+    xor eax, eax
+    push gs
+    pop eax
+    ret
+_GetGs endp
+
+_GetTr proc
+    xor eax, eax
+    str ax
+    ret
+_GetTr endp
+
+_GetTrBase proc
+    xor eax, eax
+    str ax
+    
+    movzx ecx, ax
+    push ecx
+    call _GetDescriptorBaseBySelector
+
+    push eax
+    push ecx
+    call _GetDescriptorLimitBySelector
+    pop ecx
+    add eax, ecx
+    
+    ret
+_GetTrBase endp
+
+;;从段选择子获取描述符中的Base
+_GetDescriptorBaseBySelector proc dw32Selector_:dword
+    xor eax, eax
+    mov eax, dw32Selector_
+    ;;bit 3 0-GDT 1-LDT
+    mov ecx, eax
+    and eax, 4
+    cmp eax, 4
+    jne __GDT
+    call _GetLdt
+    jmp __NEXT
+
+__GDT:
+    call _GetGdt
+
+__NEXT:
+    shl ecx, 3
+    shr ecx, 3
+    add eax, ecx
+    mov ecx, eax
+    push ecx
+    call _GetDescriptorBaseByAddress
+    ret
+_GetDescriptorBaseBySelector endp
+
+;;从段选择子获取描述符中的Limit
+_GetDescriptorLimitBySelector proc dw32Selector_:dword
+    xor eax, eax
+    mov eax, dw32Selector_
+    ;;bit 3 0-GDT 1-LDT
+    mov ecx, eax
+    and eax, 4
+    cmp eax, 4
+    jne __GDT
+    call _GetLdt
+    jmp __NEXT
+
+__GDT:
+    call _GetGdt
+
+__NEXT:
+    shl ecx, 3
+    shr ecx, 3
+    add eax, ecx
+    mov ecx, eax
+    push ecx
+    call _GetDescriptorLimitByAddress
+    ret
+_GetDescriptorLimitBySelector endp
+
+;;从描述符的地址获取描述符中的Base
+_GetDescriptorBaseByAddress proc dw32Address_:dword
+    mov eax, dw32Address_
+    push esi
+    push ecx
+    xor esi, esi
+
+    mov ecx, [eax+4]    ;;High 32 bit
+    shl ecx, 23
+    shr ecx, 23
+    or esi, ecx
+    mov ecx, [eax+4]
+    and ecx, 0FFh
+    shr ecx, 16
+    or esi, ecx
+
+    mov ecx, [eax]      ;;Low 32 bit
+    shl ecx, 16
+    or esi, ecx
+    mov eax, esi
+    pop ecx
+    pop esi
+    ret
+_GetDescriptorBaseByAddress endp
+
+;;从描述符的地址获取描述符中的Limit
+_GetDescriptorLimitByAddress proc dw32Address_:dword
+    mov eax, dw32Address_
+    push esi
+    push ecx
+    xor esi, esi
+
+    ;;G-800000h Limit-0F0000h
+    mov ecx, [eax+4]    ;;High 32 bit
+    and ecx, 0F0000h
+    or esi, ecx
+    mov ecx, [eax]
+    and ecx, 0FFFFh
+    or esi, ecx
+
+    mov ecx, [eax+4]
+    and ecx, 800000h
+    cmp ecx, 0
+    mov eax, esi
+    je __NOTG
+    shl eax, 12
+    or eax, 0FFFh
+    
+__NOTG:
+    pop ecx
+    pop esi
+    ret
+_GetDescriptorLimitByAddress endp
+
 _SetEflags proc dw32Value_:dword
 	push dw32Value_
 	popfd
@@ -44,5 +221,36 @@ _ReadMsr proc dw32Index_:dword
     rdmsr
     ret
 _ReadMsr endp
+
+_GetLdt proc
+    xor eax, eax
+    sldt ax
+
+    push eax
+    call _GetDescriptorBaseBySelector
+    ret
+_GetLdt endp
+
+_GetGdt proc
+    local @buff[6]:byte
+    sgdt @buff
+    push esi
+    lea esi, @buff
+    movzx edx, word ptr [esi]
+    mov eax, dword ptr [esi+2]
+    pop esi
+    ret
+_GetGdt endp
+
+_GetIdt proc
+    local @buff[6]:byte
+    sidt @buff
+    push esi
+    lea esi, @buff
+    movzx edx, word ptr [esi]
+    mov eax, dword ptr [esi+2]
+    pop esi
+    ret
+_GetIdt endp
 
 end

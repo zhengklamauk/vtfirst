@@ -1,3 +1,6 @@
 ﻿  Assembling Vmx.asm...
+  GuestEntry.cpp
+  HostHandler.cpp
   VtSystem.cpp
-  vtfirst.vcxproj -> D:\MyCode\vtfirst\XPDriver\vtfirst.sys
+  正在生成代码...
+  vtfirst.vcxproj -> D:\_Mycode\_C\vt\vtfirst\XPDriver\vtfirst.sys
