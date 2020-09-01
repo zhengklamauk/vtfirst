@@ -122,8 +122,8 @@ __GDT:
     call _GetGdt
 
 __NEXT:
-    shl ecx, 3
     shr ecx, 3
+    shl ecx, 3
     add eax, ecx
     mov ecx, eax
     push ecx
@@ -147,8 +147,8 @@ __GDT:
     call _GetGdt
 
 __NEXT:
-    shl ecx, 3
     shr ecx, 3
+    shl ecx, 3
     add eax, ecx
     mov ecx, eax
     push ecx
@@ -164,16 +164,16 @@ _GetDescriptorBaseByAddress proc dw32Address_:dword
     xor esi, esi
 
     mov ecx, [eax+4]    ;;High 32 bit
-    shl ecx, 23
     shr ecx, 23
+    shl ecx, 23
     or esi, ecx
     mov ecx, [eax+4]
     and ecx, 0FFh
-    shr ecx, 16
+    shl ecx, 16
     or esi, ecx
 
     mov ecx, [eax]      ;;Low 32 bit
-    shl ecx, 16
+    shr ecx, 16
     or esi, ecx
     mov eax, esi
     pop ecx

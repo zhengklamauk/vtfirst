@@ -289,6 +289,7 @@ void _SetupVMCS(PVOID pvHostHandler_, PVOID pvGuestEntry_, PVMXINFORMATION pstVM
     _vmwrite(GUEST_CS_BASE, 0);
     _vmwrite(GUEST_CS_LIMIT, 0xFFFFFFFF);
 
+	_Break3();
     _vmwrite(GUEST_TR_AR_BYTES, 0x008B);
     _vmwrite(GUEST_TR_BASE, _GetDescriptorBaseBySelector(_GetTr()));
     _vmwrite(GUEST_TR_LIMIT, _GetDescriptorLimitBySelector(_GetTr()));
@@ -327,7 +328,7 @@ void _SetupVMCS(PVOID pvHostHandler_, PVOID pvGuestEntry_, PVMXINFORMATION pstVM
     _vmwrite(HOST_GS_BASE, _GetDescriptorBaseBySelector(_GetGs()));
 
     _vmwrite(HOST_TR_SELECTOR, _GetTr() & 0xFFF8);
-    _vmwrite(HOST_TR_BASE, _GetTrBase());           //这里要调试一下
+    _vmwrite(HOST_TR_BASE, _GetDescriptorBaseBySelector(_GetTr()));           //这里要调试一下
 
     laTmp.QuadPart = _GetGdt();
     _vmwrite(HOST_GDTR_BASE, laTmp.LowPart);
