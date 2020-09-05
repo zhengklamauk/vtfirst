@@ -1,10 +1,9 @@
 #include "VtSystem.h"
 #include "Register.h"
 #include "utility.h"
-#include "Vmx.h"
 
 VMXINFORMATION g_VMXInformation;  //用来保存VMX区域相关的信息
-
+BOOLEAN g_isStopVMX = FALSE;
 
 /**************************************************************************************************
  * 功能：  开启VMX
@@ -88,8 +87,9 @@ BOOLEAN _LaunchGuest(PVOID pvHostHandler_, PVOID pvGuestEntry_)
 VOID _StopVirtualTechnology()
 {
 	if (g_VMXInformation.isVMXON == TRUE) {
-		_vmxoff();
         g_VMXInformation.isVMXON = FALSE;
+        g_isStopVMX = TRUE;
+        _vmcall();
 	}
 
 	_CR4 stCr4 = { 0 };
@@ -328,7 +328,7 @@ void _SetupVMCS(PVOID pvHostHandler_, PVOID pvGuestEntry_, PVMXINFORMATION pstVM
     _vmwrite(HOST_GS_BASE, _GetDescriptorBaseBySelector(_GetGs()));
 
     _vmwrite(HOST_TR_SELECTOR, _GetTr() & 0xFFF8);
-    _vmwrite(HOST_TR_BASE, _GetDescriptorBaseBySelector(_GetTr()));           //这里要调试一下
+    _vmwrite(HOST_TR_BASE, _GetDescriptorBaseBySelector(_GetTr()));
 
     laTmp.QuadPart = _GetGdt();
     _vmwrite(HOST_GDTR_BASE, laTmp.LowPart);

@@ -2,6 +2,7 @@
 #define __VTSYSTEM_H__
 
 #include <ntddk.h>
+#include "Vmx.h"
 
 #define HOST_STACK_SIZE             0x2000
 #define GUEST_STACK_SIZE            0x2000

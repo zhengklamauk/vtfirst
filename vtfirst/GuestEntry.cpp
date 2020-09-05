@@ -1,6 +1,8 @@
 #include "GuestEntry.h"
 #include "Vmx.h"
 
+extern VMXRETURN g_VMXReturn;
+
 void __declspec(naked) _GuestEntry()
 {
     __asm {
@@ -14,7 +16,8 @@ void __declspec(naked) _GuestEntry()
         mov fs, ax;
         mov ax, gs;
         mov gs, ax;
-    }
 
-    _vmcall();
+        mov esp, g_VMXReturn.GuestReturnEsp;
+        jmp g_VMXReturn.GuestReturnEip;
+    }
 }

@@ -76,4 +76,9 @@ _vmcall proc
     ret
 _vmcall endp
 
+_vmresume proc
+    vmresume
+    ret
+_vmresume endp
+
 end

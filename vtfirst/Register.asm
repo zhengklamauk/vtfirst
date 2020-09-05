@@ -45,6 +45,12 @@ _GetEflags proc
 	ret
 _GetEflags endp
 
+_SetEflags proc dw32Value_:dword
+	push dw32Value_
+	popfd
+	ret
+_SetEflags endp
+
 _GetCs proc
     xor eax, eax
     mov ax, cs
@@ -96,12 +102,6 @@ _GetTrBase proc
     movzx ecx, ax
     push ecx
     call _GetDescriptorBaseBySelector
-
-    push eax
-    push ecx
-    call _GetDescriptorLimitBySelector
-    pop ecx
-    add eax, ecx
     
     ret
 _GetTrBase endp
@@ -209,12 +209,6 @@ __NOTG:
     pop esi
     ret
 _GetDescriptorLimitByAddress endp
-
-_SetEflags proc dw32Value_:dword
-	push dw32Value_
-	popfd
-	ret
-_SetEflags endp
 
 _ReadMsr proc dw32Index_:dword
     mov ecx, dw32Index_
