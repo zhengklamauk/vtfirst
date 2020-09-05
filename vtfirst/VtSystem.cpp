@@ -4,6 +4,7 @@
 
 VMXINFORMATION g_VMXInformation;  //用来保存VMX区域相关的信息
 BOOLEAN g_isStopVMX = FALSE;
+VMXSTOP g_VMXStop;
 
 /**************************************************************************************************
  * 功能：  开启VMX
@@ -89,7 +90,20 @@ VOID _StopVirtualTechnology()
 	if (g_VMXInformation.isVMXON == TRUE) {
         g_VMXInformation.isVMXON = FALSE;
         g_isStopVMX = TRUE;
+
+        __asm {
+            pushad;
+            pushfd;
+            
+            mov g_VMXStop.ReturnEip, offset __VMXSTOP;
+            mov g_VMXStop.ReturnEsp, esp;
+        }
         _vmcall();
+        __asm {
+        __VMXSTOP:
+            popfd;
+            popad;
+        }
 	}
 
 	_CR4 stCr4 = { 0 };
@@ -289,7 +303,6 @@ void _SetupVMCS(PVOID pvHostHandler_, PVOID pvGuestEntry_, PVMXINFORMATION pstVM
     _vmwrite(GUEST_CS_BASE, 0);
     _vmwrite(GUEST_CS_LIMIT, 0xFFFFFFFF);
 
-	_Break3();
     _vmwrite(GUEST_TR_AR_BYTES, 0x008B);
     _vmwrite(GUEST_TR_BASE, _GetDescriptorBaseBySelector(_GetTr()));
     _vmwrite(GUEST_TR_LIMIT, _GetDescriptorLimitBySelector(_GetTr()));

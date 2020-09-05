@@ -5,22 +5,25 @@
 
 VMXRETURN g_VMXReturn;
 
+DWORD32 g_Test;
+
 VOID DriverUnload(PDRIVER_OBJECT pDriverObj_)
 {
-    __asm {
+    /*__asm {
         pushad;
         pushfd;
 
         mov g_VMXReturn.HostReturnEip, offset __HostRet;
         mov g_VMXReturn.HostReturnEsp, esp;
-    }
+    }*/
     _StopVirtualTechnology();
-    __asm {
+    /*__asm {
     __HostRet:
         popfd;
         popad;
-    }
+    }*/
 
+    g_Test = 0x20;
 	KdPrint(("Driver unload\n"));
 	return;
 }
@@ -28,7 +31,7 @@ VOID DriverUnload(PDRIVER_OBJECT pDriverObj_)
 NTSTATUS DriverEntry(PDRIVER_OBJECT pDriverObj_, PUNICODE_STRING pus_Reg)
 {
     pDriverObj_->DriverUnload = DriverUnload;
-	KdPrint(("Driver entry\n"));
+	KdPrint(("Driver entry\nTest: %X\n", &g_Test));
 
     NTSTATUS status = _StartVirtualTechnology();
     if (status != STATUS_SUCCESS) {
@@ -48,6 +51,8 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT pDriverObj_, PUNICODE_STRING pus_Reg)
         popfd;
         popad;
     }
+
+    g_Test = 0x10;
 
 __RET:
 	return STATUS_SUCCESS;

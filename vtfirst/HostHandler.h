@@ -11,6 +11,7 @@ extern "C" {
     void _HostHander();
 
     static void _VMMEntryPointEbd();
+    static void _HandleCpuid();
     static void _HandleCrAccess();
     static void _HandleVmcall();
     static void _MoveToCr(PEXITREASONCRACCESS pstExitReasonCrAccess);

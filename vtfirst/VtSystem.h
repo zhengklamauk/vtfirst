@@ -7,17 +7,6 @@
 #define HOST_STACK_SIZE             0x2000
 #define GUEST_STACK_SIZE            0x2000
 
-typedef struct _VMXINFORMATION {
-	PVOID				pvHostAddress;
-	PHYSICAL_ADDRESS	pvHostPhysicalAddress;
-	BOOLEAN				isVMXON;
-
-    PVOID               pvHostStack;
-    PVOID               pvGuestStack;
-    PVOID               pvVMCSAddress;
-    PHYSICAL_ADDRESS    pvVMCSPhysicalAddress;
-}VMXINFORMATION, *PVMXINFORMATION;
-
 NTSTATUS _StartVirtualTechnology();
 BOOLEAN _LaunchGuest(PVOID pvHostHandler_, PVOID pvGuestEntry_);
 VOID _StopVirtualTechnology();

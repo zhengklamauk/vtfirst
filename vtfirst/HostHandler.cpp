@@ -4,6 +4,8 @@ GUESTREGS g_GuestRegs;
 
 extern BOOLEAN g_isStopVMX;
 extern VMXRETURN g_VMXReturn;
+extern VMXSTOP g_VMXStop;
+extern VMXINFORMATION g_VMXInformation;
 
 void __declspec(naked) _HostHander()
 {
@@ -49,6 +51,8 @@ static void _VMMEntryPointEbd()
     //__asm int 3
     switch (dw32ExitReason) {
     case EXIT_REASON_CPUID:
+        KdPrint(("call cpuid\n"));
+        _HandleCpuid();
         break;
 
     case EXIT_REASON_CR_ACCESS:
@@ -56,6 +60,7 @@ static void _VMMEntryPointEbd()
         break;
 
     case EXIT_REASON_VMCALL:
+        KdPrint(("call vmcall\n"));
         _HandleVmcall();
         break;
 
@@ -77,7 +82,7 @@ static void _HandleCpuid()
     CPUIDRESULT stCpuidResult;
 
     //≤‚ ‘”√
-    if (g_GuestRegs.eax_ == 'Mini') {
+    if (g_GuestRegs.ecx_ == 'Mini') { //'Mini'=0x4D696E69
         g_GuestRegs.ecx_ = 0x11111111;
         g_GuestRegs.edx_ = 0x99999999;
         g_GuestRegs.ebx_ = 0x12345678;
@@ -119,11 +124,12 @@ static void _HandleCrAccess()
 static void _HandleVmcall()
 {
     if (g_isStopVMX == TRUE) {
+        _vmclear(g_VMXInformation.pvVMCSPhysicalAddress.LowPart, g_VMXInformation.pvVMCSPhysicalAddress.HighPart);
         _vmxoff();
 
         __asm {
-            mov esp, g_VMXReturn.HostReturnEsp;
-            jmp g_VMXReturn.HostReturnEip;
+            mov esp, g_VMXStop.ReturnEsp;
+            jmp g_VMXStop.ReturnEip;
         }
     }
     else {

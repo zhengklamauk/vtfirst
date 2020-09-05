@@ -51,9 +51,16 @@ typedef struct _CPUID01 {
 typedef struct _VMXRETURN {
     PVOID GuestReturnEip;
     PVOID GuestReturnEsp;
-    PVOID HostReturnEip;
-    PVOID HostReturnEsp;
+    //PVOID HostReturnEip;
+    //PVOID HostReturnEsp;
 }VMXRETURN, *PVMXRETURN;
+
+typedef struct _VMXSTOP {
+    PVOID ReturnEip;
+    PVOID ReturnEsp;
+    //PVOID HostReturnEip;
+    //PVOID HostReturnEsp;
+}VMXSTOP, *PVMXSTOP;
 
 typedef struct _EXITREASONCRACCESS {
     union {
@@ -71,6 +78,17 @@ typedef struct _EXITREASONCRACCESS {
     };
     
 }EXITREASONCRACCESS, *PEXITREASONCRACCESS;
+
+typedef struct _VMXINFORMATION {
+    PVOID				pvHostAddress;
+    PHYSICAL_ADDRESS	pvHostPhysicalAddress;
+    BOOLEAN				isVMXON;
+
+    PVOID               pvHostStack;
+    PVOID               pvGuestStack;
+    PVOID               pvVMCSAddress;
+    PHYSICAL_ADDRESS    pvVMCSPhysicalAddress;
+}VMXINFORMATION, *PVMXINFORMATION;
 
 /* VMCS Encordings */
 enum
