@@ -106,6 +106,12 @@ VOID _StopVirtualTechnology()
         }
 	}
 
+    _SetGdt((DWORD32)&g_VMXInformation.liGdt);
+    _SetIdt((DWORD32)&g_VMXInformation.liIdt);
+    if (g_VMXInformation.isEnableEPT == TRUE) {
+        _FreeEPTTable(&g_VMXInformation);
+    }
+    
 	_CR4 stCr4 = { 0 };
 	*(DWORD32*)&stCr4 = _GetCr4();
 	stCr4.VMXE = 0;
@@ -345,8 +351,10 @@ void _SetupVMCS(PVOID pvHostHandler_, PVOID pvGuestEntry_, PVMXINFORMATION pstVM
 
     laTmp.QuadPart = _GetGdt();
     _vmwrite(HOST_GDTR_BASE, laTmp.LowPart);
+    pstVMXInformation_->liGdt.QuadPart = laTmp.QuadPart;
     laTmp.QuadPart = _GetIdt();
     _vmwrite(HOST_IDTR_BASE, laTmp.LowPart);
+    pstVMXInformation_->liIdt.QuadPart = laTmp.QuadPart;
 
     _vmwrite(HOST_IA32_SYSENTER_CS, _ReadMsr(IA32_SYSENTER_CS));
     _vmwrite(HOST_IA32_SYSENTER_ESP, _ReadMsr(IA32_SYSENTER_ESP));
@@ -363,6 +371,30 @@ void _SetupVMCS(PVOID pvHostHandler_, PVOID pvGuestEntry_, PVMXINFORMATION pstVM
     _vmwrite(VM_EXIT_CONTROLS, _AdjustControlValue(0, IA32_VMX_EXIT_CTLS));
     //VM-ENTRY CONTROL FIELDS
     _vmwrite(VM_ENTRY_CONTROLS, _AdjustControlValue(0, IA32_VMX_ENTRY_CTLS));
+
+    //------------------------------以上为最小的设置------------------------------
+
+    //开启EPT
+    if (pstVMXInformation_->isEnableEPT == TRUE) {
+        
+        _vmwrite(CPU_BASED_VM_EXEC_CONTROL, _AdjustControlValue(0x80000000, IA32_VMX_PROCBASED_CTLS));
+        _vmwrite(SECONDARY_VM_EXEC_CONTROL, _AdjustControlValue(0x2, IA32_VMX_PROCBASED_CTLS2));
+        pstVMXInformation_->pvPML4TPhysicalAddress = MmGetPhysicalAddress(pstVMXInformation_->pv64PML4T);
+
+        DWORD32 dw32Type;
+LARGE_INTEGER liTmp;
+liTmp.QuadPart = _ReadMsr(IA32_VMX_EPT_VPID_CAP);
+if ((liTmp.LowPart & 0x40) == 0) {
+    dw32Type = 0;
+}
+else {
+    dw32Type = 6;
+}
+
+_vmwrite(EPT_POINTER, (pstVMXInformation_->pvPML4TPhysicalAddress.LowPart | dw32Type | (3 << 3)) & 0xFFFFFFFF);
+_vmwrite(EPT_POINTER_HIGH, pstVMXInformation_->pvPML4TPhysicalAddress.HighPart);
+_ForPAE();
+    }
 
     return;
 }
@@ -382,4 +414,172 @@ DWORD32 _AdjustControlValue(DWORD32 dw32Original_, DWORD32 dw32MsrIndex_)
     dw32Original_ |= liMsrValue.LowPart;
     dw32Original_ &= liMsrValue.HighPart;
     return dw32Original_;
+}
+
+//这两个全局变量是测试设置0xE号为可执行，但不可读写（读写的数据会变成别的内存地址）
+DWORD64 g_dw64FakePhysicalAddress;  //读写0xE号中断时，实际会变成读写这里的空间
+DWORD64 g_dw64HookPhysicalAddress;  
+/**************************************************************************************************
+ * 功能：  初始化页表
+ * 参数：
+ * 返回：  返回PML4T，返回0则表示失败
+ * 其他：
+***************************************************************************************************/
+PVOID64 _SetupEPT()
+{
+    PVOID64 pvPML4T;
+    PVOID64 pvPDPT;
+    PHYSICAL_ADDRESS paPDPT;
+
+    InitializeListHead(&g_VMXInformation.lsEPTTable);
+
+    LARGE_INTEGER laCTLS2;
+    laCTLS2.QuadPart = _ReadMsr(IA32_VMX_PROCBASED_CTLS2);
+    if ((laCTLS2.HighPart & 2) == 0) {
+        _KdPrint("Not Support EPT\n");
+        return NULL;
+    }
+
+    //测试设置0xE号为可执行，但不可读写（读写的数据会变成别的内存地址）
+    PVOID pvTmp = _AllocateOnePageSize(&g_VMXInformation);
+    g_dw64FakePhysicalAddress = MmGetPhysicalAddress(pvTmp).QuadPart;
+
+    //_Break3();
+    //L1
+    pvPML4T = _AllocateOnePageSize(&g_VMXInformation);
+    if (pvPML4T == NULL) {
+        _KdPrint("_AllocateOnePageSize error\n");
+        return NULL;
+    }
+    //L2
+    pvPDPT = _AllocateOnePageSize(&g_VMXInformation);
+    if (pvPDPT == NULL) {
+        _KdPrint("_AllocateOnePageSize error\n");
+        return NULL;
+    }
+    paPDPT = MmGetPhysicalAddress(pvPDPT);
+    *(DWORD64*)pvPML4T = (paPDPT.QuadPart) | 7;   //7 = P | R/W | U/S
+
+    PVOID64 pvPDT;
+    PHYSICAL_ADDRESS paPDT;
+    PVOID64 pvPT;
+    PHYSICAL_ADDRESS paPT;
+    int i, j, k;
+    for (i = 0; i < 4; i++) {   //L3
+        pvPDT = _AllocateOnePageSize(&g_VMXInformation);
+        if (pvPDT == NULL) {
+            _KdPrint("_AllocateOnePageSize error\n");
+            return NULL;
+        }
+        paPDT = MmGetPhysicalAddress(pvPDT);
+        *(DWORD64*)pvPDPT = (paPDT.QuadPart) | 7;
+        pvPDPT = (PVOID64)((DWORD64)pvPDPT + 8);
+
+        for (j = 0; j < 512; j++) {     //L4
+            pvPT = _AllocateOnePageSize(&g_VMXInformation);
+            if (pvPT == NULL) {
+                _KdPrint("_AllocateOnePageSize error\n");
+                return NULL;
+            }
+            paPT = MmGetPhysicalAddress(pvPT);
+            *(DWORD64*)pvPDT = (paPT.QuadPart) | 7;
+            pvPDT = (PVOID64)((DWORD64)pvPDT + 8);
+
+            for (k = 0; k < 512; k++) {     //physical address
+                *(DWORD64*)pvPT = ((i << 30) | (j << 21) | (k << 12) | 0x37) & 0xFFFFFFFF;
+
+                //这个条件块是测试设置0xE号为可执行，但不可读写（读写的数据会变成别的内存地址）
+                //0x0是0xE号中断的物理地址，可使用!vtop命令得到
+                if (0x4e1000 == (((i << 30) | (j << 21) | (k << 12)) & 0xFFFFFFFF)) {
+                    *(DWORD64*)pvPT = ((i << 30) | (j << 21) | (k << 12) | 0x34) & 0xFFFFFFFF;
+                    g_dw64HookPhysicalAddress = (DWORD64)pvPT;
+                }
+
+                pvPT = (PVOID64)((DWORD64)pvPT + 8);
+            }
+        }
+    }
+
+    g_VMXInformation.isEnableEPT = TRUE;
+    g_VMXInformation.pv64PML4T = pvPML4T;
+
+    return pvPML4T;
+}
+
+
+/**************************************************************************************************
+ * 功能：  分配一个页大小的空间，并把这个地址挂到一个链表中以方便释放
+ * 参数：  VMXINFORMATION结构体，内含链表成员
+ * 返回：  返回分配的空间的地址，失败返回0
+ * 其他：
+***************************************************************************************************/
+static PVOID64 _AllocateOnePageSize(PVMXINFORMATION pstVMXInformation_)
+{
+    PVOID pvPage;
+    PEPTTABLE pstEPTTable;
+
+    pvPage = ExAllocatePoolWithTag(NonPagedPool, 0x1000, 'AOP1');
+    if (pvPage != NULL) {
+        RtlZeroMemory(pvPage, 0x1000);
+    }
+    pstEPTTable = (PEPTTABLE)ExAllocatePoolWithTag(PagedPool, sizeof(EPTTABLE), 'AOP2');
+    if (pstEPTTable == NULL) {
+        if (pvPage != NULL) {
+            ExFreePool(pvPage);
+        }
+    }
+    else {
+        pstEPTTable->pvTableAddress = pvPage;
+        InsertTailList(&pstVMXInformation_->lsEPTTable, &pstEPTTable->lsNode);
+    }
+
+    return (PVOID64)pvPage;
+}
+
+
+/**************************************************************************************************
+ * 功能：  释放页表所占用的内存
+ * 参数：
+ * 返回：
+ * 其他：
+***************************************************************************************************/
+static void _FreeEPTTable(PVMXINFORMATION pstVMXInformation_)
+{
+    LIST_ENTRY* pleList;
+    PEPTTABLE pstTable;
+ 
+    while (IsListEmpty(&pstVMXInformation_->lsEPTTable) != TRUE) {
+        pleList = RemoveHeadList(&pstVMXInformation_->lsEPTTable);
+        if (pleList != &pstVMXInformation_->lsEPTTable) {
+            pstTable = (PEPTTABLE)pleList;
+            if (pstTable->pvTableAddress != NULL) {
+                ExFreePool(pstTable->pvTableAddress);
+            }
+        }
+    }
+    return;
+}
+
+
+/**************************************************************************************************
+ * 功能：  2-9-9-12分页开启EPT要做的处理
+ * 参数：
+ * 返回：
+ * 其他：  此函数可能会过时
+***************************************************************************************************/
+static void _ForPAE()
+{
+    _vmwrite(GUEST_PDPTR0, MmGetPhysicalAddress((PVOID)0xC0600000).LowPart | 1);
+    _vmwrite(GUEST_PDPTR0_HIGH, MmGetPhysicalAddress((PVOID)0xC0600000).HighPart);
+
+    _vmwrite(GUEST_PDPTR1, MmGetPhysicalAddress((PVOID)0xC0601000).LowPart | 1);
+    _vmwrite(GUEST_PDPTR1_HIGH, MmGetPhysicalAddress((PVOID)0xC0601000).HighPart);
+
+    _vmwrite(GUEST_PDPTR2, MmGetPhysicalAddress((PVOID)0xC0602000).LowPart | 1);
+    _vmwrite(GUEST_PDPTR2_HIGH, MmGetPhysicalAddress((PVOID)0xC0602000).HighPart);
+
+    _vmwrite(GUEST_PDPTR3, MmGetPhysicalAddress((PVOID)0xC0603000).LowPart | 1);
+    _vmwrite(GUEST_PDPTR3_HIGH, MmGetPhysicalAddress((PVOID)0xC0603000).HighPart);
+
+    return;
 }

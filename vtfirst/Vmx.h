@@ -62,7 +62,7 @@ typedef struct _VMXSTOP {
     //PVOID HostReturnEsp;
 }VMXSTOP, *PVMXSTOP;
 
-typedef struct _EXITREASONCRACCESS {
+typedef struct _EXITREASON_CRACCESS {
     union {
         struct {
             DWORD64 CRX : 4;
@@ -77,18 +77,44 @@ typedef struct _EXITREASONCRACCESS {
         LARGE_INTEGER u;
     };
     
-}EXITREASONCRACCESS, *PEXITREASONCRACCESS;
+}EXITREASON_CRACCESS, *PEXITREASON_CRACCESS;
+
+typedef struct _EXITREASON_EPTVIOLATIONS {
+    union {
+        struct {
+            DWORD64 isReadViolation : 1;
+            DWORD64 isWriteViolation : 1;
+            DWORD64 isExecuteViolation : 1;
+            DWORD64 Reserved_1 : 29;
+            DWORD64 Reserved_2 : 32;
+        };
+        DWORD64 QuadPart;
+    };
+}EXITREASON_EPTVIOLATIONS, *PEXITREASON_EPTVIOLATIONS;
 
 typedef struct _VMXINFORMATION {
     PVOID				pvHostAddress;
     PHYSICAL_ADDRESS	pvHostPhysicalAddress;
+
     BOOLEAN				isVMXON;
+    BOOLEAN             isEnableEPT;
+    LIST_ENTRY          lsEPTTable;
+    PVOID64             pv64PML4T;
+    PHYSICAL_ADDRESS    pvPML4TPhysicalAddress;
 
     PVOID               pvHostStack;
     PVOID               pvGuestStack;
     PVOID               pvVMCSAddress;
     PHYSICAL_ADDRESS    pvVMCSPhysicalAddress;
+
+    LARGE_INTEGER       liGdt;
+    LARGE_INTEGER       liIdt;
 }VMXINFORMATION, *PVMXINFORMATION;
+
+typedef struct _EPTTABLE {
+    LIST_ENTRY  lsNode;
+    PVOID       pvTableAddress;
+}EPTTABLE, *PEPTTABLE;
 
 /* VMCS Encordings */
 enum
@@ -350,6 +376,7 @@ enum
 #define EXIT_REASON_PAUSE_INSTRUCTION   40
 #define EXIT_REASON_MACHINE_CHECK       41
 #define EXIT_REASON_TPR_BELOW_THRESHOLD 43
+#define EXIT_EPT_VIOLATION              48
 
 #ifdef __cplusplus
 extern "C" {
@@ -369,5 +396,6 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
+
 
 #endif // !__VMX_H__

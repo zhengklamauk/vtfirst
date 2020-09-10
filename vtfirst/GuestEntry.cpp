@@ -17,6 +17,8 @@ void __declspec(naked) _GuestEntry()
         mov ax, gs;
         mov gs, ax;
 
+        sti;
+
         mov esp, g_VMXReturn.GuestReturnEsp;
         jmp g_VMXReturn.GuestReturnEip;
     }

@@ -18,4 +18,9 @@ static void _SetupVMCS(PVOID pvHostHandler_, PVOID pvGuestEntry_, PVMXINFORMATIO
 static DWORD32 _AdjustControlValue(DWORD32 dw32Original_, DWORD32 dw32MsrIndex_);
 static void _FreeVMXInformationMember(PVMXINFORMATION pstVMXInformation_);
 
+PVOID64 _SetupEPT();
+static PVOID64 _AllocateOnePageSize(PVMXINFORMATION pstVMXInformation);
+void _FreeEPTTable(PVMXINFORMATION pstVMXInformation_);
+static void _ForPAE();
+
 #endif // !__VTSYSTEM_H__

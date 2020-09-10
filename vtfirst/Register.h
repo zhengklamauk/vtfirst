@@ -8,8 +8,10 @@
 #define IA32_SYSENTER_EIP               0x176
 #define IA32_VMX_PINBASED_CTLS          0x481
 #define IA32_VMX_PROCBASED_CTLS         0x482
+#define IA32_VMX_PROCBASED_CTLS2        0x48B
 #define IA32_VMX_EXIT_CTLS              0x483
 #define IA32_VMX_ENTRY_CTLS             0x484
+#define IA32_VMX_EPT_VPID_CAP           0x48C
 
 #define IA32_FEATURE_CONTROL 		    0x03a
 typedef struct _MSR_IA32_FEATURE_CONTROL_MSR
@@ -129,7 +131,9 @@ extern "C" {
 
     DWORD32 _GetLdt();
     DWORD64 _GetGdt();
+    VOID _SetGdt(DWORD32 dw32Value_);
     DWORD64 _GetIdt();
+    VOID _SetIdt(DWORD32 dw32Value_);
 
     DWORD64 _ReadMsr(DWORD32 dw32Index_);
 

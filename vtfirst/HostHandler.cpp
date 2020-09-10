@@ -64,8 +64,14 @@ static void _VMMEntryPointEbd()
         _HandleVmcall();
         break;
 
+    case EXIT_EPT_VIOLATION:
+        //__asm int 3;
+        _HandleEPTViolation();
+        dw32ExitStructionLen = 0;
+        break;
+
     default:
-        KdPrint(("Not handled reason: %X\n", dw32ExitReason));
+        KdPrint(("Not handled reason: %X\ng_GuestRegs.eip_=%X\n", dw32ExitReason, g_GuestRegs.eip_));
         __asm int 3;        //其它未处理的退出原因
     }
 
@@ -100,7 +106,7 @@ static void _HandleCpuid()
 
 static void _HandleCrAccess()
 {
-    EXITREASONCRACCESS stExitReasonCrAccess;
+    EXITREASON_CRACCESS stExitReasonCrAccess;
 
     stExitReasonCrAccess.u.LowPart = _vmread(EXIT_QUALIFICATION);
 
@@ -140,20 +146,33 @@ static void _HandleVmcall()
     return;
 }
 
-static void _MoveToCr(PEXITREASONCRACCESS pstExitReasonCrAccess)
+static void _MoveToCr(PEXITREASON_CRACCESS pstExitReasonCrAccess)
 {
     DWORD32 dw32Tmp = *((DWORD32*)&g_GuestRegs + pstExitReasonCrAccess->Reg);
 
     switch (pstExitReasonCrAccess->CRX) {
     case 3:
         _vmwrite(GUEST_CR3, dw32Tmp);
+        //DWORD32 dw32Cr3 = _GetCr3();
+        _SetCr3(_vmread(GUEST_CR3));
+
+        _vmwrite(GUEST_PDPTR0, MmGetPhysicalAddress((PVOID)0xC0600000).LowPart | 1);
+        _vmwrite(GUEST_PDPTR0_HIGH, MmGetPhysicalAddress((PVOID)0xC0600000).HighPart);
+        _vmwrite(GUEST_PDPTR1, MmGetPhysicalAddress((PVOID)0xC0601000).LowPart | 1);
+        _vmwrite(GUEST_PDPTR1_HIGH, MmGetPhysicalAddress((PVOID)0xC0601000).HighPart);
+        _vmwrite(GUEST_PDPTR2, MmGetPhysicalAddress((PVOID)0xC0602000).LowPart | 1);
+        _vmwrite(GUEST_PDPTR2_HIGH, MmGetPhysicalAddress((PVOID)0xC0602000).HighPart);
+        _vmwrite(GUEST_PDPTR3, MmGetPhysicalAddress((PVOID)0xC0603000).LowPart | 1);
+        _vmwrite(GUEST_PDPTR3_HIGH, MmGetPhysicalAddress((PVOID)0xC0603000).HighPart);
+
+        //_SetCr3(dw32Cr3);
         break;
     }
 
     return;
 }
 
-static void _MoveFromCr(PEXITREASONCRACCESS pstExitReasonCrAccess)
+static void _MoveFromCr(PEXITREASON_CRACCESS pstExitReasonCrAccess)
 {
     switch (pstExitReasonCrAccess->CRX) {
     case 3:
@@ -162,4 +181,21 @@ static void _MoveFromCr(PEXITREASONCRACCESS pstExitReasonCrAccess)
     }
 
     return;
+}
+
+//这里是测试设置0xE号为可执行，但不可读写（读写的数据会变成别的内存地址）
+extern DWORD64 g_dw64FakePhysicalAddress;
+extern DWORD64 g_dw64HookPhysicalAddress;
+static void _HandleEPTViolation()
+{
+    EXITREASON_EPTVIOLATIONS stExitReasonEPTViolations;
+
+    stExitReasonEPTViolations.QuadPart = _vmread(EXIT_QUALIFICATION);
+    if (stExitReasonEPTViolations.isExecuteViolation == 1) {
+        //0x0是0xE号中断的物理地址，可使用!vtop命令得到
+        *(DWORD64*)g_dw64HookPhysicalAddress = 0x4e1000 | 0x34;
+    }
+    else if (stExitReasonEPTViolations.isReadViolation == 1 || stExitReasonEPTViolations.isWriteViolation == 1) {
+        *(DWORD64*)g_dw64HookPhysicalAddress = g_dw64FakePhysicalAddress | 0x33;
+    }
 }

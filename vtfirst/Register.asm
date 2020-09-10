@@ -236,6 +236,21 @@ _GetGdt proc
     ret
 _GetGdt endp
 
+_SetGdt proc dw32Value_:dword
+    local @buff[6]:byte
+    push esi
+    push edi
+    mov esi, dw32Value_
+    lea edi, @buff
+    mov eax, dword ptr [esi+4]
+    and eax, 0FFFFh
+    mov word ptr [edi], ax
+    mov eax, dword ptr [esi]
+    mov dword ptr [edi+2], eax
+    lgdt fword ptr @buff
+    ret
+_SetGdt endp
+
 _GetIdt proc
     local @buff[6]:byte
     sidt @buff
@@ -246,5 +261,20 @@ _GetIdt proc
     pop esi
     ret
 _GetIdt endp
+
+_SetIdt proc dw32Value_:dword
+    local @buff[6]:byte
+    push esi
+    push edi
+    mov esi, dw32Value_
+    lea edi, @buff
+    mov eax, dword ptr [esi+4]
+    and eax, 0FFFFh
+    mov word ptr [edi], ax
+    mov eax, dword ptr [esi]
+    mov dword ptr [edi+2], eax
+    lidt fword ptr @buff
+    ret
+_SetIdt endp
 
 end

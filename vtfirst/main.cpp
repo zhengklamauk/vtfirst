@@ -33,6 +33,15 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT pDriverObj_, PUNICODE_STRING pus_Reg)
     pDriverObj_->DriverUnload = DriverUnload;
 	KdPrint(("Driver entry\nTest: %X\n", &g_Test));
 
+    DWORD64 dw64Address = (DWORD64)_SetupEPT();
+    if (dw64Address == 0) {
+        KdPrint(("EPT enable error\n"));
+    }
+    else {
+        KdPrint(("EPT ON\n"));
+    }
+
+    //__asm int 3;
     NTSTATUS status = _StartVirtualTechnology();
     if (status != STATUS_SUCCESS) {
         goto __RET;

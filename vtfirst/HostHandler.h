@@ -3,6 +3,7 @@
 
 #include <ntddk.h>
 #include "Vmx.h"
+#include "Register.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -14,8 +15,9 @@ extern "C" {
     static void _HandleCpuid();
     static void _HandleCrAccess();
     static void _HandleVmcall();
-    static void _MoveToCr(PEXITREASONCRACCESS pstExitReasonCrAccess);
-    static void _MoveFromCr(PEXITREASONCRACCESS pstExitReasonCrAccess);
+    static void _MoveToCr(PEXITREASON_CRACCESS pstExitReasonCrAccess);
+    static void _MoveFromCr(PEXITREASON_CRACCESS pstExitReasonCrAccess);
+    static void _HandleEPTViolation();
 
 #ifdef __cplusplus
 }
